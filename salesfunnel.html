@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Credential Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <style>
+        :root {
+            --background: #111827;
+            --sidebar: #1f2937;
+            --border: #374151;
+            --text-primary: #d1d5db;
+            --text-secondary: #9ca3af;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+        }
+        body { font-family: 'Inter', sans-serif; background-color: var(--background); color: var(--text-primary); }
+        .nav-link { color: var(--text-secondary); transition: all 0.2s ease-in-out; border-bottom: 2px solid transparent; }
+        .nav-link:hover { color: #ffffff; border-bottom-color: var(--primary-hover); }
+        .nav-link.active { color: #ffffff; font-weight: 600; border-bottom-color: var(--primary); }
+        .card { background-color: var(--sidebar); border: 1px solid var(--border); }
+        .btn-primary { background-color: var(--primary); color: #ffffff; transition: background-color 0.2s; }
+        .btn-primary:hover { background-color: var(--primary-hover); }
+        .btn-primary:disabled { background-color: #1e3a8a; cursor: not-allowed; }
+        .input-field { background-color: var(--border); border: 1px solid #4b5563; color: var(--text-primary); }
+        .input-field:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px #2563eb60; }
+        .loader { border: 4px solid #4b5563; border-top: 4px solid var(--primary); border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        table { border-collapse: collapse; width: 100%; table-layout: fixed; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid var(--border); word-wrap: break-word; vertical-align: top; }
+        th { background-color: var(--border); font-weight: 600; }
+        tbody tr:hover { background-color: var(--border); }
+        
+        .list-item { cursor: pointer; transition: background-color 0.2s; }
+        .list-item:hover { background-color: #4b5563; }
+        .list-item.active { background-color: var(--primary); color: white; }
+        .list-item.active h3, .list-item.active p { color: white; }
+        
+        .article { background-color: #1f2937; padding: 1rem; border-radius: 0.5rem; border: 1px solid #4b5563; margin-bottom: 1rem; }
+        .status-badge { padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
+        .status-published { background-color: #10b981; color: #ffffff; }
+        .status-draft { background-color: #6b7280; color: #ffffff; }
+
+        .tab-button { background-color: var(--border); color: var(--text-secondary); }
+        .tab-button.active { background-color: var(--primary); color: #ffffff; font-weight: 600; }
+        .toggle-switch { width: 40px; height: 20px; background-color: #4b5563; border-radius: 10px; position: relative; cursor: pointer; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background-color: white; border-radius: 50%; transition: .4s; }
+        input:checked + .slider { background-color: var(--primary); transform: translateX(20px); }
+
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 50; }
+        .modal-content { background-color: var(--sidebar); padding: 2rem; border-radius: 0.5rem; width: 90%; max-width: 600px; max-height: 80vh; overflow-y: auto; border: 1px solid var(--border); }
+        .resource-tag { background-color: #374151; color: #9ca3af; font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; }
+        
+        .expandable-content { max-height: 6em; overflow: hidden; transition: max-height 0.3s ease-out; position: relative; }
+        .expandable-content.expanded { max-height: 1000px; transition: max-height 0.5s ease-in; }
+        .expand-btn { color: var(--primary); cursor: pointer; font-weight: 500; font-size: 0.875rem; margin-top: 4px; }
+        
+        .color-picker-wrapper { display: flex; align-items: center; gap: 0.5rem; background-color: var(--border); padding: 4px; border-radius: 0.375rem; border: 1px solid #4b5563;}
+        .color-well { width: 2.25rem; height: 2.25rem; border: none; padding: 0; background: none; border-radius: 0.25rem; cursor: pointer; -webkit-appearance: none; }
+        .color-well::-webkit-color-swatch-wrapper { padding: 0; }
+        .color-well::-webkit-color-swatch { border: none; border-radius: 0.25rem; }
+    </style>
+</head>
+<body class="h-screen">
+
+    <!-- Login View -->
+    <div id="view-login" class="flex items-center justify-center h-screen p-4">
+        <div class="w-full max-w-md">
+            <div class="card p-8 rounded-lg shadow-lg">
+                <div class="text-center mb-8">
+                    <i class="fas fa-shield-halved text-blue-400 text-5xl"></i>
+                    <h1 class="text-3xl font-bold text-white mt-4">Sales Credential</h1>
+                    <p class="text-gray-400">Đăng nhập để bắt đầu xây dựng uy tín.</p>
+                </div>
+                <form id="login-form">
+                    <div class="mb-4">
+                        <label for="email" class="block text-gray-300 mb-2">Email</label>
+                        <input type="email" id="email" class="input-field w-full rounded-md p-3" value="demo@credential.com">
+                    </div>
+                    <div class="mb-6">
+                        <label for="password" class="block text-gray-300 mb-2">Mật khẩu</label>
+                        <input type="password" id="password" class="input-field w-full rounded-md p-3" value="demo">
+                    </div>
+                    <p class="text-center text-sm text-gray-500 mb-4">Sử dụng tài khoản mẫu để trải nghiệm.</p>
+                    <button type="submit" class="btn-primary w-full rounded-md py-3 font-semibold">Đăng nhập</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App Container (hidden by default) -->
+    <div id="app-container" class="hidden h-screen flex flex-col">
+        <!-- Header / Horizontal Navigation -->
+        <header class="bg-sidebar w-full p-4 shadow-md z-10">
+            <div class="container mx-auto flex justify-between items-center">
+                <div class="text-2xl font-bold text-blue-400">
+                    <i class="fas fa-shield-halved mr-2"></i>
+                    <span class="hidden sm:inline">Sales Credential</span>
+                </div>
+                <nav class="flex space-x-4 sm:space-x-8">
+                    <a href="#" id="nav-creation" class="nav-link active py-2 px-1 sm:px-3 text-sm sm:text-base"><i class="fas fa-compass-drafting mr-2 hidden sm:inline"></i>Kiến tạo</a>
+                    <a href="#" id="nav-library" class="nav-link py-2 px-1 sm:px-3 text-sm sm:text-base"><i class="fas fa-folder-open mr-2 hidden sm:inline"></i>Bài viết</a>
+                    <a href="#" id="nav-scheduler" class="nav-link py-2 px-1 sm:px-3 text-sm sm:text-base"><i class="fas fa-calendar-check mr-2 hidden sm:inline"></i>Định kỳ</a>
+                </nav>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto container mx-auto">
+            <!-- Creation Space View -->
+            <div id="view-creation">
+                 <h1 class="text-3xl font-bold text-white mb-4">Không gian Kiến tạo</h1>
+                <div class="flex border-b border-gray-700 mb-6">
+                    <button class="tab-button py-2 px-4 rounded-t-md active" data-tab="creation-profile">1. Định vị</button>
+                    <button class="tab-button py-2 px-4 rounded-t-md" data-tab="creation-resource">2. Thư viện</button>
+                    <button class="tab-button py-2 px-4 rounded-t-md" data-tab="creation-deepspy">3. Kiến thức</button>
+                </div>
+                <!-- Tab Content -->
+                <div id="tab-content-creation-profile" class="tab-pane">
+                     <div class="card p-6 rounded-lg">
+                         <h2 class="text-xl font-semibold mb-2 text-white">Quét Profile & Định vị Guideline</h2>
+                          <p class="text-gray-400 mb-4">Nhập link Facebook để AI phân tích và tạo Guideline thương hiệu.</p>
+                          <div class="flex flex-col sm:flex-row gap-4">
+                               <input id="profile-url" type="text" class="input-field w-full rounded-md p-3" placeholder="https://facebook.com/...">
+                               <button id="profile-scan-btn" class="btn-primary rounded-md px-6 py-3 font-semibold whitespace-nowrap flex items-center justify-center">
+                                   <i class="fas fa-crosshairs mr-2"></i><span>Quét Profile</span>
+                               </button>
+                          </div>
+                          <div id="guideline-output" class="mt-4 overflow-x-auto">
+                               <table class="min-w-full">
+                                   <thead><tr><th>URL</th><th>Phong cách</th><th>Chủ đề chính</th><th>Hành động</th></tr></thead>
+                                   <tbody id="guideline-table-body"></tbody>
+                               </table>
+                          </div>
+                     </div>
+                </div>
+                <div id="tab-content-creation-resource" class="tab-pane hidden">
+                     <div class="card p-6 rounded-lg">
+                         <div class="mb-8">
+                             <h2 class="text-xl font-semibold mb-2 text-white">1. Nhập Testimonial từ Khách hàng</h2>
+                             <p class="text-gray-400 mb-4">Tải lên ảnh chụp màn hình tin nhắn, email... làm bằng chứng uy tín.</p>
+                             <div class="flex flex-col sm:flex-row gap-4">
+                                 <input id="testimonial-upload-input" type="file" accept="image/*" multiple class="block w-full text-sm text-gray-400 file:mr-4 file:py-3 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-gray-700 file:text-gray-300 hover:file:bg-gray-600 flex-grow"/>
+                                 <div class="color-picker-wrapper">
+                                     <input type="color" id="testimonial-color-well" value="#10b981" class="color-well">
+                                     <input type="text" id="testimonial-color-hex" value="#10b981" class="input-field w-24 p-2 rounded-md">
+                                 </div>
+                                 <button id="testimonial-import-btn" class="btn-primary rounded-md px-6 py-3 font-semibold whitespace-nowrap"><i class="fas fa-upload mr-2"></i>Import</button>
+                             </div>
+                         </div>
+
+                         <hr class="border-gray-700 my-8">
+
+                         <div>
+                             <h2 class="text-xl font-semibold mb-2 text-white">2. Tìm Ảnh minh họa từ Google</h2>
+                             <p class="text-gray-400 mb-4">Tìm kiếm hình ảnh để làm phong phú thêm bài viết.</p>
+                             <div class="flex flex-col sm:flex-row gap-4 mb-4">
+                                 <input id="image-search-query" type="text" class="input-field w-full rounded-md p-3" placeholder="Nhập chủ đề ảnh cần tìm (vd: luxury car interior)">
+                                 <div class="flex items-center gap-2">
+                                     <label class="text-gray-400 whitespace-nowrap">Số lượng:</label>
+                                     <input id="image-search-limit" type="number" min="1" max="5" value="3" class="input-field w-20 p-2 rounded-md text-center">
+                                 </div>
+                                 <div class="color-picker-wrapper">
+                                     <input type="color" id="image-search-color-well" value="#2563eb" class="color-well">
+                                     <input type="text" id="image-search-color-hex" value="#2563eb" class="input-field w-24 p-2 rounded-md">
+                                 </div>
+                                 <button id="image-search-btn" class="btn-primary rounded-md px-6 py-3 font-semibold whitespace-nowrap flex items-center justify-center">
+                                     <i class="fas fa-search mr-2"></i><span>Tìm Ảnh</span>
+                                 </button>
+                             </div>
+                         </div>
+
+                          <div id="resource-output" class="mt-4 overflow-x-auto">
+                               <table class="min-w-full">
+                                   <thead><tr><th>Loại</th><th>Ảnh xem trước</th><th>Chủ đề / Tên file</th><th>Bài viết trang cá nhân gợi ý</th><th>Hành động</th></tr></thead>
+                                   <tbody id="resource-table-body"></tbody>
+                               </table>
+                          </div>
+                     </div>
+                </div>
+                <div id="tab-content-creation-deepspy" class="tab-pane hidden">
+                     <div class="card p-6 rounded-lg">
+                          <div class="mb-8">
+                             <h2 class="text-xl font-semibold mb-2 text-white">1. Tự nhập tài liệu PDF</h2>
+                             <p class="text-gray-400 mb-4">Tải lên các tài liệu, báo cáo... làm kiến thức nền.</p>
+                             <div class="flex flex-col sm:flex-row gap-4">
+                                 <input id="pdf-upload-input" type="file" accept=".pdf" multiple class="block w-full text-sm text-gray-400 file:mr-4 file:py-3 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-gray-700 file:text-gray-300 hover:file:bg-gray-600 flex-grow"/>
+                                 <button id="pdf-import-btn" class="btn-primary rounded-md px-6 py-3 font-semibold whitespace-nowrap"><i class="fas fa-upload mr-2"></i>Import PDF</button>
+                             </div>
+                         </div>
+                         <hr class="border-gray-700 my-8">
+                         <div>
+                             <h2 class="text-xl font-semibold mb-2 text-white">2. Quét PDF từ Google</h2>
+                             <p class="text-gray-400 mb-4">Tìm kiếm các báo cáo, tài liệu PDF công khai trên Internet.</p>
+                              <div class="flex flex-col sm:flex-row gap-4">
+                                   <input id="deepspy-query" type="text" class="input-field w-full rounded-md p-3" placeholder="Nhập chủ đề nghiên cứu...">
+                                    <div class="flex items-center gap-2">
+                                     <label for="deepspy-limit" class="text-gray-400 whitespace-nowrap">Số lượng:</label>
+                                     <input id="deepspy-limit" type="number" min="1" max="5" value="3" class="input-field w-20 p-2 rounded-md text-center">
+                                 </div>
+                                 <button id="deepspy-pdf-btn" class="btn-primary rounded-md px-6 py-3 font-semibold whitespace-nowrap flex items-center justify-center">
+                                      <i class="fas fa-file-pdf mr-2"></i><span>Quét PDF</span>
+                                   </button>
+                              </div>
+                         </div>
+                          <div id="deepspy-output" class="mt-4 overflow-x-auto">
+                               <table class="min-w-full">
+                                   <thead><tr><th>Nguồn</th><th>Bài viết trang cá nhân gợi ý</th><th>Tên file</th><th>Hành động</th></tr></thead>
+                                   <tbody id="deepspy-table-body"></tbody>
+                               </table>
+                          </div>
+                     </div>
+                </div>
+            </div>
+
+            <!-- Asset Library View -->
+            <div id="view-library" class="hidden">
+                 <h1 class="text-3xl font-bold text-white mb-6">Bài viết</h1>
+                 <div id="library-content">
+                     <div id="library-list-view">
+                         <div class="card p-6 rounded-lg mb-6">
+                             <div class="flex flex-col gap-4">
+                                  <input id="campaign-name" type="text" class="input-field flex-grow rounded-md p-3" placeholder="Nhập tên chiến dịch mới...">
+                                  <select id="guideline-selector" class="input-field w-full rounded-md p-3"></select>
+                                  <select id="knowledge-selector" class="input-field w-full rounded-md p-3"></select>
+                                  <div class="flex items-center gap-4">
+                                     <button id="create-campaign-btn" class="btn-primary rounded-md px-6 py-3 font-semibold whitespace-nowrap self-start"><i class="fas fa-plus mr-2"></i>Tạo Chiến dịch</button>
+                                     <label class="flex items-center space-x-2 text-gray-300">
+                                         <input type="checkbox" id="campaign-google-search-toggle" class="form-checkbox bg-gray-800 border-gray-600 text-blue-500 h-5 w-5">
+                                         <span>Duyệt Google Search để gợi ý bài viết</span>
+                                     </label>
+                                  </div>
+                             </div>
+                         </div>
+                         <div class="card rounded-lg overflow-hidden">
+                             <div id="campaign-list" class="space-y-2 p-4"></div>
+                         </div>
+                     </div>
+                     <div id="library-detail-view" class="hidden">
+                         <!-- JS will render this -->
+                     </div>
+                 </div>
+            </div>
+
+            <!-- Scheduler View -->
+            <div id="view-scheduler" class="hidden">
+                 <h1 class="text-3xl font-bold text-white mb-6">Định kỳ</h1>
+                 <div id="scheduler-content">
+                     <div id="scheduler-list-view">
+                         <div class="card p-6 rounded-lg mb-6">
+                              <h2 class="text-xl font-semibold mb-2 text-white">Thêm nhiệm vụ theo dõi Website</h2>
+                              <p class="text-gray-400 mb-4">Nhập vào link web, hệ thống sẽ định kỳ quét link đó có gì mới không.</p>
+                              <div class="flex flex-col sm:flex-row gap-4">
+                                 <input id="task-url-input" class="input-field flex-grow p-3 rounded-md" placeholder="https://www.example.com/news">
+                                 <select id="task-frequency" class="input-field p-3 rounded-md">
+                                     <option value="Hàng ngày">Hàng ngày</option>
+                                     <option value="Hàng tuần">Hàng tuần</option>
+                                 </select>
+                                 <button id="schedule-task-btn" class="btn-primary font-semibold py-3 px-6 rounded-md">Thêm</button>
+                              </div>
+                         </div>
+                         <div class="card rounded-lg overflow-hidden">
+                             <table class="min-w-full">
+                                 <thead><tr><th>Website đang theo dõi</th><th>Tần suất</th><th>Trạng thái</th></tr></thead>
+                                 <tbody id="scheduled-tasks-body"></tbody>
+                             </table>
+                         </div>
+                     </div>
+                     <div id="scheduler-detail-view" class="hidden">
+                         <!-- JS will render this -->
+                     </div>
+                 </div>
+            </div>
+            
+            <!-- Modal for selection -->
+            <div id="selection-modal" class="modal-overlay hidden">
+                 <div class="modal-content">
+                     <div class="flex justify-between items-center mb-4">
+                         <h2 id="modal-title" class="text-xl font-semibold text-white">Chọn</h2>
+                         <button id="close-modal-btn" class="text-gray-400 hover:text-white text-3xl">&times;</button>
+                     </div>
+                     <div id="modal-selection-content" class="space-y-4"></div>
+                     <div class="mt-6 flex justify-end gap-4">
+                         <button id="cancel-modal-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded-md">Hủy</button>
+                         <button id="save-modal-btn" class="btn-primary font-semibold py-2 px-4 rounded-md">Lưu</button>
+                     </div>
+                </div>
+            </div>
+
+             <!-- Modal for editing records -->
+            <div id="edit-modal" class="modal-overlay hidden">
+                 <div class="modal-content">
+                     <div class="flex justify-between items-center mb-4">
+                         <h2 id="edit-modal-title" class="text-xl font-semibold text-white">Chỉnh sửa</h2>
+                         <button id="edit-close-modal-btn" class="text-gray-400 hover:text-white text-3xl">&times;</button>
+                     </div>
+                     <div id="edit-modal-form-content" class="space-y-4"></div>
+                     <div class="mt-6 flex justify-end gap-4">
+                         <button id="edit-cancel-modal-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded-md">Hủy</button>
+                         <button id="edit-save-modal-btn" class="btn-primary font-semibold py-2 px-4 rounded-md">Lưu thay đổi</button>
+                     </div>
+                </div>
+            </div>
+
+            <div id="toast" class="fixed bottom-5 right-5 bg-green-500 text-white py-2 px-4 rounded-lg shadow-lg opacity-0 transition-opacity duration-300"><p id="toast-message"></p></div>
+        </main>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM Elements ---
+        const loginView = document.getElementById('view-login');
+        const appContainer = document.getElementById('app-container');
+        const loginForm = document.getElementById('login-form');
+
+        // --- STATE MANAGEMENT ---
+        let state = { guidelines: [], deepspyResults: [], resources: [], campaigns: [], scheduledTasks: [], taskLogs: [] };
+        let currentEditing = { type: null, id: null };
+        let currentArticleSelection = { campaignId: null, articleId: null, type: '' };
+
+        function loadState() {
+            const defaultCampaigns = [
+                { id: 1, name: 'Chiến dịch Quý 4 - Tăng tốc Chuyển đổi số cho Doanh nghiệp vừa và nhỏ', guidelineId: 'guideline-0', knowledgeId: 'deepspy-0', articles: Array.from({length: 10}, (_, i) => ({ id: 100+i, title: `Bài ${i+1}: 5 Sai lầm phổ biến khi lựa chọn giải pháp CRM và cách tránh`, status: i % 2 === 0 ? 'Đã đăng' : 'Chưa đăng', schedule: '', resources: [`resource-0`], content: i === 0 ? `<p>Trong bối cảnh thị trường bất động sản cao cấp tại TP.HCM đang ngày càng cạnh tranh, The Global City nổi lên như một đại đô thị phức hợp, mang trong mình tầm vóc quốc tế. Tuy nhiên, đối với các nhà đầu tư sành sỏi, quyết định "xuống tiền" không chỉ dựa vào những lời quảng cáo hoa mỹ mà còn phụ thuộc vào các yếu tố cốt lõi như pháp lý, tiềm năng tăng giá và uy tín của chủ đầu tư. Bài viết này, dựa trên kiến thức nền từ báo cáo của Savills Việt Nam, sẽ đi sâu phân tích những khía cạnh này.</p><p class="mt-4">Yếu tố đầu tiên và quan trọng nhất chính là pháp lý dự án. Theo tài liệu chúng tôi thu thập được, The Global City đã hoàn thiện đầy đủ các giấy tờ cần thiết, bao gồm giấy chứng nhận quyền sử dụng đất và giấy phép xây dựng cho các phân khu. Điều này, kết hợp với uy tín của Masterise Homes - một nhà phát triển bất động sản hàng hiệu có tiếng, tạo nên một nền tảng vững chắc cho niềm tin của nhà đầu tư, giảm thiểu tối đa các rủi ro liên quan đến pháp lý mà nhiều dự án khác đang vướng phải.</p><p class="mt-4">Về tiềm năng tăng giá, phân khu Canal District được xem là "trái tim" của dự án với hệ thống kênh đào nhân tạo dài 2km và chuỗi shophouse sầm uất. Dựa trên phân tích so sánh với các khu vực tương tự như Phú Mỹ Hưng giai đoạn đầu, tỷ suất lợi nhuận từ việc cho thuê và tăng giá vốn tại đây được dự báo sẽ rất hấp dẫn. Như một khách hàng của chúng tôi, anh Minh, Giám đốc một công ty logistics, đã chia sẻ trong một tin nhắn: "Anh quyết định đầu tư 2 căn shophouse ở đây sau khi xem phân tích của em, tiềm năng khai thác kinh doanh và cho thuê là rất rõ ràng."</p><img src="https://placehold.co/400x200/2563eb/FFF?text=Canal+District+View" class="rounded-lg my-4 w-full object-cover"><p class="mt-4">Tóm lại, với sự minh bạch về pháp lý, tiềm năng tăng trưởng vượt trội và được bảo chứng bởi các thương hiệu lớn, The Global City, đặc biệt là phân khu Canal District, là một lựa chọn đầu tư đáng cân nhắc trong giai đoạn này. Các nhà đầu tư nên tìm hiểu kỹ và làm việc với các đơn vị tư vấn chuyên nghiệp để có được quyết định tốt nhất.</p>`: null }))},
+                { id: 2, name: 'Chiến dịch Bất động sản Cao cấp - Phân tích The Global City', guidelineId: 'guideline-0', knowledgeId: null, articles: Array.from({length: 10}, (_, i) => ({ id: 200+i, title: `Bài ${i+1}: Đánh giá pháp lý và tiềm năng tăng giá của phân khu Canal District`, status: 'Chưa đăng', schedule: '', resources: [], content: null }))}
+            ];
+            state.guidelines = JSON.parse(localStorage.getItem('credential_guidelines')) || [{ id: 'guideline-0', url: 'https://www.facebook.com/satyanadella', style: 'Lãnh đạo, Tầm nhìn, tập trung vào AI và sự đồng cảm', theme: 'Công nghệ doanh nghiệp, Trí tuệ nhân tạo, Văn hóa tổ chức', audience: 'Lãnh đạo doanh nghiệp, Nhà phát triển, Báo chí công nghệ' }];
+            state.deepspyResults = JSON.parse(localStorage.getItem('credential_deepspy')) || [
+                { id: 'deepspy-0', source: 'google', query: 'So sánh chi phí giữa AWS và Azure cho startup', type: 'PDF', content: `<strong>Tiêu đề: The Global City: 3 Yếu Tố "Vàng" Nhà Đầu Tư Cần Mổ Xẻ Trước Khi Xuống Tiền</strong><br><br>Trong bối cảnh thị trường bất động sản cao cấp tại TP.HCM ngày càng cạnh tranh, The Global City nổi lên như một đại đô thị phức hợp, mang trong mình tầm vóc quốc tế.<br><br>Dựa trên báo cáo thị trường từ Savills, có 3 yếu tố cốt lõi nhà đầu tư cần xem xét:<br><br>1️⃣ <strong>Pháp lý minh bạch:</strong> Dự án đã hoàn thiện giấy chứng nhận quyền sử dụng đất và giấy phép xây dựng. Đây là "tấm khiên" vững chắc bảo vệ nhà đầu tư khỏi rủi ro.<br><br>2️⃣ <strong>Tiềm năng tăng giá vượt trội:</strong> Phân khu shophouse Canal District, với hệ thống kênh đào 2km, được dự báo sẽ có tỷ suất lợi nhuận hấp dẫn, tương tự như Phú Mỹ Hưng giai đoạn đầu.<br><br>3️⃣ <strong>Uy tín từ CĐT:</strong> Masterise Homes, nhà phát triển BĐS hàng hiệu, là sự bảo chứng cho chất lượng và tiến độ dự án.<br><br>=> Với sự minh bạch về pháp lý và tiềm năng tăng trưởng, The Global City là một lựa chọn đầu tư đáng cân nhắc.`, fileName: 'Savills_Report_Q3_2025.pdf' },
+                { id: 'deepspy-1', source: 'upload', query: null, type: 'PDF', content: `<strong>Tiêu đề: Cập Nhật Chính Sách Hoa Hồng Mới 2026: Đột Phá Thu Nhập Cho Sales</strong><br><br>Anh em sales chú ý! 🔥<br><br>Chính sách hoa hồng mới sẽ chính thức áp dụng từ 01/01/2026 với nhiều thay đổi đột phá, đặc biệt là cơ chế tính thưởng cho các hợp đồng dài hạn.<br><br>Đây là cơ hội tuyệt vời để bứt phá thu nhập trong năm tới. Chi tiết chính sách đã được gửi qua email, mọi người check mail và chuẩn bị tinh thần "cày cuốc" nhé! 💪<br><br>#Sales #ChinhSachMoi #HoaHong2026`, fileName: 'Chinh_sach_hoa_hong_2026.pdf' }
+            ];
+            state.resources = JSON.parse(localStorage.getItem('credential_resources')) || [
+                { id: 'resource-0', type: 'Ảnh', source: 'upload', query: 'feedback_acme_corp.png', images: [{url: 'https://placehold.co/100x60/10b981/FFF?text=Thanks!'}], color: '#10b981', content: '<strong>Tiêu đề: Lời Cảm Ơn Chân Thành Từ Đội Ngũ!</strong><br><br>Một feedback nhỏ từ khách hàng ACME Corp nhưng là động lực lớn lao cho cả team. 😊<br><br>Sự hài lòng của khách hàng chính là kim chỉ nam cho mọi hoạt động của chúng tôi. Xin chân thành cảm ơn sự tin tưởng và đồng hành của quý khách!<br><br>#CustomerFeedback #Testimonial #ThankYou' },
+                { id: 'resource-1', type: 'Ảnh', source: 'google', query: 'business team meeting success', images: [{url: 'https://placehold.co/100x60/2563eb/FFF?text=Success'}, {url: 'https://placehold.co/100x60/4b5563/FFF?text=Meeting'}], color: '#2563eb', content: '<strong>Tiêu đề: Gặt Hái Thành Công Mới!</strong><br><br>Buổi họp chiến lược hôm nay đã diễn ra thành công tốt đẹp với nhiều quyết sách quan trọng được thông qua. 🚀<br><br>Sẵn sàng cho một quý bùng nổ phía trước! Cùng nhau, chúng ta sẽ đạt được những mục tiêu lớn lao hơn nữa.<br><br>#Success #Teamwork #BusinessMeeting #Goals' }
+            ];
+            state.campaigns = JSON.parse(localStorage.getItem('credential_campaigns')) || defaultCampaigns;
+            state.scheduledTasks = JSON.parse(localStorage.getItem('credential_scheduledTasks')) || [{ id: 'task-0', url: 'https://techcrunch.com/category/artificial-intelligence/', frequency: 'Hàng tuần', active: true }];
+            state.taskLogs = JSON.parse(localStorage.getItem('credential_taskLogs')) || [
+                { taskId: 'task-0', time: new Date().toLocaleString('vi-VN'), status: '<span class="text-green-400">Hoàn thành</span>', content: 'Phát hiện bài viết mới: "OpenAI announces new partnership with Apple".' },
+                { taskId: 'task-0', time: new Date(Date.now() - 86400000).toLocaleString('vi-VN'), status: '<span class="text-gray-400">Không có gì mới</span>', content: 'Không có thay đổi nào được phát hiện.' }
+            ];
+        }
+
+        function saveState() {
+             localStorage.setItem('credential_guidelines', JSON.stringify(state.guidelines));
+             localStorage.setItem('credential_deepspy', JSON.stringify(state.deepspyResults));
+             localStorage.setItem('credential_resources', JSON.stringify(state.resources));
+             localStorage.setItem('credential_campaigns', JSON.stringify(state.campaigns));
+             localStorage.setItem('credential_scheduledTasks', JSON.stringify(state.scheduledTasks));
+             localStorage.setItem('credential_taskLogs', JSON.stringify(state.taskLogs));
+        }
+
+        // --- CORE UI & LOGIC ---
+        const views = { creation: document.getElementById('view-creation'), library: document.getElementById('view-library'), scheduler: document.getElementById('view-scheduler') };
+        const navLinks = { creation: document.getElementById('nav-creation'), library: document.getElementById('nav-library'), scheduler: document.getElementById('nav-scheduler') };
+        
+        function switchView(viewName) {
+            Object.values(views).forEach(v => v.classList.add('hidden'));
+            Object.values(navLinks).forEach(l => l.classList.remove('active'));
+            if(views[viewName]) views[viewName].classList.remove('hidden');
+            if(navLinks[viewName]) navLinks[viewName].classList.add('active');
+        }
+
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            if(!toast) return;
+            toast.querySelector('p').textContent = message;
+            toast.className = `fixed bottom-5 right-5 text-white py-2 px-4 rounded-lg shadow-lg transition-opacity duration-300 ${isError ? 'bg-red-500' : 'bg-green-500'}`;
+            toast.classList.remove('opacity-0');
+            setTimeout(() => toast.classList.add('opacity-0'), 3000);
+        }
+
+        async function simulateAITask(button, task) {
+             const originalContent = button.innerHTML;
+            button.innerHTML = '<div class="loader mx-auto"></div>';
+            button.disabled = true;
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            await task();
+            button.innerHTML = originalContent;
+            button.disabled = false;
+        }
+        
+        // --- RENDER FUNCTIONS ---
+        function renderAll() {
+            renderGuidelineTable();
+            renderDeepSpyTable();
+            renderResourceTable();
+            renderGuidelineSelector();
+            renderKnowledgeSelector();
+            renderCampaignList();
+            renderScheduledTasksTable();
+            document.getElementById('library-detail-view').classList.add('hidden');
+            document.getElementById('library-list-view').classList.remove('hidden');
+            document.getElementById('scheduler-detail-view').classList.add('hidden');
+            document.getElementById('scheduler-list-view').classList.remove('hidden');
+        }
+
+        function renderExpandableContent(content) {
+            const limit = 100; // Character limit
+            if (content.length <= limit) {
+                return `<div>${content}</div>`;
+            }
+            return `
+                <div>
+                    <div class="expandable-content">
+                        ${content}
+                    </div>
+                    <button class="expand-btn">[Xem thêm]</button>
+                </div>
+            `;
+        }
+
+        function renderGuidelineTable() { 
+            document.getElementById('guideline-table-body').innerHTML = state.guidelines.map(g => `
+                <tr>
+                    <td>${g.url}</td>
+                    <td>${g.style}</td>
+                    <td>${renderExpandableContent(g.theme)}</td>
+                    <td>
+                        <div class="flex gap-4">
+                           <button class="edit-btn text-blue-400 hover:text-blue-300" data-type="guideline" data-id="${g.id}"><i class="fas fa-edit"></i></button>
+                           <button class="delete-btn text-red-400 hover:text-red-300" data-type="guideline" data-id="${g.id}"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </td>
+                </tr>`).join(''); 
+        }
+
+        function renderDeepSpyTable() { 
+            document.getElementById('deepspy-table-body').innerHTML = state.deepspyResults.map(r => `
+                <tr>
+                    <td><span class="font-semibold px-2 py-1 rounded ${r.source === 'upload' ? 'bg-green-800 text-green-300' : 'bg-blue-800 text-blue-300'}">${r.source === 'upload' ? 'Upload' : 'Google'}</span></td>
+                    <td>${renderExpandableContent(r.content)}</td>
+                    <td>${renderExpandableContent(r.fileName)}</td>
+                    <td>
+                         <div class="flex gap-4">
+                           <button class="edit-btn text-blue-400 hover:text-blue-300" data-type="deepspy" data-id="${r.id}"><i class="fas fa-edit"></i></button>
+                           <button class="delete-btn text-red-400 hover:text-red-300" data-type="deepspy" data-id="${r.id}"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </td>
+                </tr>`).join(''); 
+        }
+
+        function renderResourceTable() {
+            document.getElementById('resource-table-body').innerHTML = state.resources.map(r => `
+                <tr>
+                    <td><span class="font-semibold px-2 py-1 rounded ${r.source === 'upload' ? 'bg-green-800 text-green-300' : 'bg-blue-800 text-blue-300'}">${r.source === 'upload' ? 'Testimonial' : 'Google'}</span></td>
+                    <td>
+                        <div class="flex flex-wrap gap-2">
+                            ${r.images.map(img => `<img src="${img.url}" class="w-20 h-12 object-cover rounded">`).join('')}
+                        </div>
+                    </td>
+                    <td>${renderExpandableContent(r.query)}</td>
+                    <td>${renderExpandableContent(r.content)}</td>
+                    <td>
+                        <div class="flex gap-4">
+                           <button class="edit-btn text-blue-400 hover:text-blue-300" data-type="resource" data-id="${r.id}"><i class="fas fa-edit"></i></button>
+                           <button class="delete-btn text-red-400 hover:text-red-300" data-type="resource" data-id="${r.id}"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function renderGuidelineSelector() { document.getElementById('guideline-selector').innerHTML = `<option value="">Chọn Guideline</option>` + state.guidelines.map(g => `<option value="${g.id}">Guideline: ${g.url.split('/').pop() || g.url}</option>`).join(''); }
+        function renderKnowledgeSelector() { document.getElementById('knowledge-selector').innerHTML = `<option value="">Chọn Kiến thức nền</option>` + state.deepspyResults.map(k => `<option value="${k.id}">${k.fileName}</option>`).join(''); }
+        
+        function renderCampaignList() {
+            document.getElementById('campaign-list').innerHTML = state.campaigns.map(campaign => `
+                <div class="list-item p-4 rounded-lg" data-campaign-id="${campaign.id}">
+                    <h3 class="font-bold">${campaign.name}</h3>
+                    <p class="text-sm text-gray-400">${campaign.articles.length} bài viết</p>
+                </div>
+            `).join('');
+        }
+        
+        function renderArticlesForCampaign(campaignId) {
+            const campaign = state.campaigns.find(c => c.id === campaignId);
+            if (!campaign) return;
+            const detailView = document.getElementById('library-detail-view');
+            detailView.innerHTML = `
+                <button class="mobile-back-btn btn-primary mb-4 py-2 px-4 rounded-md"><i class="fas fa-arrow-left mr-2"></i> Quay lại Danh sách</button>
+                <h2 class="text-2xl font-bold text-white mb-4">${campaign.name}</h2>
+                <div class="space-y-4">
+                    ${campaign.articles.map(article => {
+                         const articleContent = article.content ? `
+                             <div class="text-gray-300 space-y-4 mt-4">
+                                 <div class="expandable-content">${article.content}</div>
+                                 <button class="expand-btn">[Xem thêm]</button>
+                             </div>` : '';
+                         return `
+                             <div class="article">
+                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                     <div>
+                                         <p class="font-semibold text-white">${article.title}</p>
+                                         <div class="mt-2 flex flex-wrap gap-2">
+                                             ${article.resources.map(resId => { const resource = state.resources.find(r => r.id === resId); return resource ? `<span class="resource-tag"><i class="fas ${resource.source === 'upload' ? 'fa-quote-left text-green-400' : 'fa-image text-blue-400'}"></i> ${resource.query}</span>` : ''; }).join('')}
+                                         </div>
+                                          ${articleContent}
+                                     </div>
+                                     <div class="flex flex-col items-start sm:items-end gap-2">
+                                         <div class="flex items-center gap-2">
+                                             <span class="status-badge ${article.status === 'Đã đăng' ? 'status-published' : 'status-draft'}">${article.status}</span>
+                                             <input type="datetime-local" class="input-field text-sm p-1 rounded-md bg-gray-800 w-full" value="${article.schedule}">
+                                         </div>
+                                         <div class="flex items-center gap-2">
+                                             <button class="manage-resources-btn text-sm bg-gray-600 hover:bg-gray-700 font-semibold py-1 px-3 rounded-md" data-campaign-id="${campaign.id}" data-article-id="${article.id}">Tài nguyên</button>
+                                             <button class="text-xs bg-blue-600 hover:bg-blue-700 font-semibold py-1 px-3 rounded-md">Lưu</button>
+                                         </div>
+                                     </div>
+                                 </div>
+                             </div>
+                         `}).join('')
+                    }
+                </div>
+            `;
+        }
+
+        function renderScheduledTasksTable() {
+             document.getElementById('scheduled-tasks-body').innerHTML = state.scheduledTasks.map((task, index) => `
+                <tr class="list-item" data-task-id="${task.id}">
+                     <td>${task.url.replace('https://','').replace('www.','')}</td>
+                    <td>${task.frequency}</td>
+                    <td>
+                        <label class="toggle-switch">
+                          <input type="checkbox" data-task-index="${index}" ${task.active ? 'checked' : ''}>
+                          <span class="slider"></span>
+                        </label>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function renderLogsForTask(taskId) {
+            const task = state.scheduledTasks.find(t => t.id === taskId);
+            const detailView = document.getElementById('scheduler-detail-view');
+            const logs = state.taskLogs.filter(log => log.taskId === taskId);
+            
+            detailView.innerHTML = `
+                <button class="mobile-back-btn btn-primary mb-4 py-2 px-4 rounded-md"><i class="fas fa-arrow-left mr-2"></i> Quay lại Danh sách</button>
+                <h2 class="text-2xl font-bold text-white mb-4">Logs cho: ${task.url.replace('https://www.','').split('/')[0]}</h2>
+                <div class="space-y-4">
+                     ${ (logs.length > 0) 
+                         ? logs.map(log => `<div class="article !p-3"><p class="text-sm text-gray-400">${log.time} - ${log.status}</p><div class="text-white mt-1">${renderExpandableContent(log.content)}</div></div>`).join('') 
+                         : `<div class="text-center text-gray-500">Không có log nào.</div>`
+                       }
+                </div>`;
+        }
+        
+        function openSelectionModal(type, article) {
+            currentArticleSelection.type = type;
+            const modalTitle = document.getElementById('modal-title');
+            const content = document.getElementById('modal-selection-content');
+            let html = '';
+
+            if (type === 'resource') {
+                modalTitle.innerText = 'Chọn Tài nguyên Ảnh';
+                html = '<div class="grid grid-cols-2 sm:grid-cols-4 gap-4">';
+                state.resources.forEach((item) => {
+                    const checked = article.resources.includes(item.id) ? 'checked' : '';
+                    html += `<label class="relative cursor-pointer"><input type="checkbox" value="${item.id}" ${checked} class="sr-only peer"><img src="${item.images[0].url}" class="rounded-md peer-checked:ring-2 peer-checked:ring-blue-500"><div class="absolute top-2 right-2 bg-white/70 peer-checked:bg-blue-500 rounded-full w-5 h-5 flex items-center justify-center text-black"><i class="fas fa-check opacity-0 peer-checked:opacity-100"></i></div></label>`;
+                });
+                html += '</div>';
+            }
+            content.innerHTML = html;
+            document.getElementById('selection-modal').classList.remove('hidden');
+        }
+
+        function openEditModal(type, id) { /* ... same as before ... */ }
+        
+        // --- EVENT LISTENERS ---
+        function attachAllEventListeners() {
+            loginForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                showToast('Đăng nhập thành công!');
+                loginView.classList.add('hidden');
+                appContainer.classList.remove('hidden');
+                initializeApp();
+            });
+        }
+
+        function initializeApp() {
+            loadState();
+            switchView('creation');
+            renderAll();
+            attachAppEventListeners();
+        }
+
+        function attachAppEventListeners() {
+            // Main app event delegation
+            const mainContent = document.querySelector('main');
+            mainContent.addEventListener('click', (e) => {
+                const expandBtn = e.target.closest('.expand-btn');
+                if (expandBtn) {
+                    const content = expandBtn.previousElementSibling;
+                    content.classList.toggle('expanded');
+                    expandBtn.textContent = content.classList.contains('expanded') ? '[Thu gọn]' : '[Xem thêm]';
+                }
+                // ... (other delegations for edit, delete, etc.)
+            });
+
+            // Specific listeners that need to be re-attached
+            Object.keys(navLinks).forEach(key => navLinks[key].addEventListener('click', (e) => { e.preventDefault(); switchView(key); renderAll();}));
+            document.querySelectorAll('#view-creation .tab-button').forEach(button => {
+                button.addEventListener('click', () => {
+                    document.querySelectorAll('#view-creation .tab-button').forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+                    document.querySelectorAll('#view-creation .tab-pane').forEach(content => content.classList.add('hidden'));
+                    document.getElementById(`tab-content-${button.dataset.tab}`).classList.remove('hidden');
+                });
+            });
+            
+            document.getElementById('library-content').addEventListener('click', e => {
+                const campaignHeader = e.target.closest('.list-item');
+                const backBtn = e.target.closest('.mobile-back-btn');
+                const listView = document.getElementById('library-list-view');
+                const detailView = document.getElementById('library-detail-view');
+
+                if (campaignHeader) {
+                    listView.classList.add('hidden');
+                    detailView.classList.remove('hidden');
+                    const campaignId = parseInt(campaignHeader.dataset.campaignId);
+                    renderArticlesForCampaign(campaignId);
+                }
+                if (backBtn) {
+                    detailView.classList.add('hidden');
+                    listView.classList.remove('hidden');
+                }
+            });
+
+            document.getElementById('scheduler-content').addEventListener('click', e => {
+                const taskItem = e.target.closest('.list-item');
+                const backBtn = e.target.closest('.mobile-back-btn');
+                const listView = document.getElementById('scheduler-list-view');
+                const detailView = document.getElementById('scheduler-detail-view');
+                
+                if (taskItem) {
+                    listView.classList.add('hidden');
+                    detailView.classList.remove('hidden');
+                    const taskId = taskItem.dataset.taskId;
+                    renderLogsForTask(taskId);
+                }
+                if (backBtn) {
+                    detailView.classList.add('hidden');
+                    listView.classList.remove('hidden');
+                }
+            });
+        }
+
+        attachAllEventListeners();
+    });
+    </script>
+</body>
+</html>
+
