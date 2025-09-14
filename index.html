@@ -197,7 +197,13 @@
                                    <i class="fas fa-crosshairs mr-2"></i><span>Quét Profile</span>
                                </button>
                           </div>
-                          <div id="guideline-output" class="mt-4 overflow-x-auto">
+                          <div class="flex justify-between items-center mt-6 mb-2">
+                              <h3 class="text-lg font-semibold text-white">Danh sách Profile</h3>
+                              <button id="refresh-guideline-btn" class="text-gray-400 hover:text-white transition-colors duration-200 flex items-center">
+                                  <i class="fas fa-sync-alt mr-2"></i>Làm mới
+                              </button>
+                          </div>
+                          <div id="guideline-output" class="overflow-x-auto">
                                <table class="min-w-full">
                                    <thead><tr><th>URL</th><th>Phân tích & Phong cách</th><th>Hành động</th></tr></thead>
                                    <tbody id="guideline-table-body"></tbody>
@@ -311,6 +317,30 @@
                 console.error(`Failed to fetch from table ${tableId}:`, error);
                 showToast(`Lỗi tải dữ liệu từ bảng ${tableId}.`, true);
                 return [];
+            }
+        }
+
+        async function addToBaserow(tableId, payload) {
+            const url = `${baserowConfig.host}api/database/rows/table/${tableId}/?user_field_names=true`;
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Token ${baserowConfig.token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error(`API error for adding to table ${tableId}:`, errorData);
+                    throw new Error(`API error: ${response.statusText}`);
+                }
+                return await response.json();
+            } catch (error) {
+                console.error(`Failed to add to table ${tableId}:`, error);
+                showToast(`Lỗi khi thêm dữ liệu vào bảng ${tableId}.`, true);
+                return null;
             }
         }
 
@@ -460,9 +490,9 @@
             }));
             
             mainContent.innerHTML = mainContentHTML;
-            switchView('chatbot');
+            // The view is switched here, but event listeners are now attached only once.
+            switchView('chatbot'); 
             renderAll();
-            attachAppEventListeners();
         }
         
         // --- RENDER FUNCTIONS ---
@@ -616,9 +646,97 @@
             setTimeout(() => toast.classList.add('opacity-0'), 3000);
         }
 
+        async function refreshGuidelines(buttonEl) {
+            const icon = buttonEl.querySelector('i');
+            icon.classList.add('fa-spin');
+            buttonEl.disabled = true;
+
+            const dinhvi = await fetchFromBaserow(baserowConfig.tables.dinhvi);
+            const userFilter = (item) => item.user && item.user.some(u => u.value === state.user.email);
+            state.guidelines = dinhvi.filter(userFilter).map(item => ({
+                id: item.id,
+                url: item['fb url'],
+                notes: item.Notes,
+            }));
+            renderGuidelineTable();
+
+            icon.classList.remove('fa-spin');
+            buttonEl.disabled = false;
+        }
+
+
         // --- EVENT LISTENERS & APP START ---
-        function attachAppEventListeners() {
-            document.querySelectorAll('.nav-link').forEach(link => link.addEventListener('click', (e) => {
+        function setupMainEventListeners() {
+            // This listener is now attached only once to the main content area.
+            mainContent.addEventListener('click', async (e) => {
+                const expandBtn = e.target.closest('.expand-btn');
+                if (expandBtn) {
+                    const content = expandBtn.previousElementSibling;
+                    content.classList.toggle('expanded');
+                    expandBtn.textContent = content.classList.contains('expanded') ? '[Thu gọn]' : '[Xem thêm]';
+                }
+
+                const tabButton = e.target.closest('.tab-button');
+                if (tabButton) {
+                     document.querySelectorAll('#view-creation .tab-button').forEach(btn => btn.classList.remove('active'));
+                     tabButton.classList.add('active');
+                     document.querySelectorAll('#view-creation .tab-pane').forEach(content => content.classList.add('hidden'));
+                     document.getElementById(`tab-content-${tabButton.dataset.tab}`).classList.remove('hidden');
+                }
+                
+                const profileScanBtn = e.target.closest('#profile-scan-btn');
+                if (profileScanBtn) {
+                    const urlInput = document.getElementById('profile-url');
+                    const url = urlInput.value.trim();
+                    if (!url) {
+                        showToast('Vui lòng nhập URL Facebook.', true);
+                        return;
+                    }
+
+                    const originalButtonHTML = profileScanBtn.innerHTML;
+                    profileScanBtn.innerHTML = `<div class="loader mx-auto"></div>`;
+                    profileScanBtn.disabled = true;
+
+                    const payload = {
+                        'fb url': url,
+                        'user': [state.user.id]
+                    };
+                    
+                    const newRecord = await addToBaserow(baserowConfig.tables.dinhvi, payload);
+
+                    if (newRecord) {
+                        urlInput.value = '';
+                        showToast('Đã thêm thành công, làm mới dữ liệu sau 60s');
+                        // Instead of a full reload, just refresh the guidelines table after a delay
+                        setTimeout(() => {
+                           const refreshBtn = document.getElementById('refresh-guideline-btn');
+                           if(refreshBtn) refreshGuidelines(refreshBtn);
+                        }, 60000);
+                    }
+                    
+                    profileScanBtn.innerHTML = originalButtonHTML;
+                    profileScanBtn.disabled = false;
+                }
+
+                const refreshGuidelineBtn = e.target.closest('#refresh-guideline-btn');
+                if (refreshGuidelineBtn) {
+                    await refreshGuidelines(refreshGuidelineBtn);
+                }
+
+                const chatSendBtn = e.target.closest('#chat-send-btn');
+                if (chatSendBtn) {
+                    handleSendMessage();
+                }
+            });
+
+            mainContent.addEventListener('keydown', (e) => {
+                if (e.target.id === 'chat-input' && e.key === 'Enter') {
+                    e.preventDefault();
+                    handleSendMessage();
+                }
+            });
+
+             document.querySelectorAll('.nav-link').forEach(link => link.addEventListener('click', (e) => {
                 e.preventDefault();
                 switchView(e.target.id.replace('nav-', ''));
             }));
@@ -630,62 +748,6 @@
                 loginView.classList.remove('hidden');
                 loginForm.reset();
                 mainContent.innerHTML = '';
-            });
-            
-            mainContent.addEventListener('click', (e) => {
-                const expandBtn = e.target.closest('.expand-btn');
-                if (expandBtn) {
-                    const content = expandBtn.previousElementSibling;
-                    content.classList.toggle('expanded');
-                    expandBtn.textContent = content.classList.contains('expanded') ? '[Thu gọn]' : '[Xem thêm]';
-                }
-
-                document.querySelectorAll('#view-creation .tab-button').forEach(button => {
-                    if (button.contains(e.target)) {
-                         document.querySelectorAll('#view-creation .tab-button').forEach(btn => btn.classList.remove('active'));
-                         button.classList.add('active');
-                         document.querySelectorAll('#view-creation .tab-pane').forEach(content => content.classList.add('hidden'));
-                         document.getElementById(`tab-content-${button.dataset.tab}`).classList.remove('hidden');
-                    }
-                });
-                
-                const campaignHeader = e.target.closest('#library-list-view .list-item');
-                if (campaignHeader) {
-                    document.getElementById('library-list-view').classList.add('hidden');
-                    document.getElementById('library-detail-view').classList.remove('hidden');
-                    renderArticlesForCampaign(parseInt(campaignHeader.dataset.campaignId));
-                }
-
-                const taskItem = e.target.closest('#scheduler-list-view .list-item');
-                if (taskItem) {
-                    document.getElementById('scheduler-list-view').classList.add('hidden');
-                    document.getElementById('scheduler-detail-view').classList.remove('hidden');
-                    renderLogsForTask(parseInt(taskItem.dataset.taskId));
-                }
-
-                const backBtn = e.target.closest('.mobile-back-btn');
-                if(backBtn) {
-                    if (document.getElementById('library-detail-view')?.contains(backBtn)) {
-                        document.getElementById('library-detail-view').classList.add('hidden');
-                        document.getElementById('library-list-view').classList.remove('hidden');
-                    }
-                     if (document.getElementById('scheduler-detail-view')?.contains(backBtn)) {
-                        document.getElementById('scheduler-detail-view').classList.add('hidden');
-                        document.getElementById('scheduler-list-view').classList.remove('hidden');
-                    }
-                }
-                
-                const chatSendBtn = e.target.closest('#chat-send-btn');
-                if (chatSendBtn) {
-                    handleSendMessage();
-                }
-            });
-            
-            mainContent.addEventListener('keydown', (e) => {
-                if (e.target.id === 'chat-input' && e.key === 'Enter') {
-                    e.preventDefault();
-                    handleSendMessage();
-                }
             });
         }
         
@@ -701,6 +763,7 @@
             state.user = user;
             state.threadid = `thread_${user.email}_${new Date().getTime()}`; // Create a unique threadid per session
             await loadDataForUser(user.email);
+            setupMainEventListeners(); // Setup listeners only once after the first successful load
         }
 
         loginForm.addEventListener('submit', async (e) => {
@@ -717,7 +780,7 @@
             const foundUser = users.find(user => user.mail === email && user.password === password);
 
             if (foundUser) {
-                const userData = { email: foundUser.mail, name: foundUser.Name };
+                const userData = { id: foundUser.id, email: foundUser.mail, name: foundUser.Name };
                 localStorage.setItem('loggedInUser', JSON.stringify(userData));
                 showToast('Đăng nhập thành công!');
                 loginView.classList.add('hidden');
@@ -747,6 +810,5 @@
     </script>
 </body>
 </html>
-
 
 
